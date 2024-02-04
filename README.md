@@ -26,3 +26,20 @@ or:
 ```bash
 SAM_+_Stable_Diffusion_Inpainting_Virtue_Try_on.ipynb
 ```
+
+## Reference
+[SAM + Stable Diffusion Inpainting](https://colab.research.google.com/drive/1umJUZdqEAcm9GQkzLG-EWXo8_ya-ImRL)
+
+[OutfitAnyone](https://github.com/HumanAIGC/OutfitAnyone)
+
+[lora](https://github.com/cloneofsimo/lora)
+
+[Dreambooth-Stable-Diffusion](https://github.com/XavierXiao/Dreambooth-Stable-Diffusion)
+
+[segment-anything](https://github.com/facebookresearch/segment-anything)
+
+[super-gradients](https://github.com/Deci-AI/super-gradients)
+
+
+
+
