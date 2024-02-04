@@ -17,7 +17,12 @@ pip install diffusers transformers accelerate scipy safetensors
 ```
 
 Then run the inpainting pipeline:
+
 ```bash
 python Baseline_inpainting.py
 ```
+or:
 
+```bash
+SAM_+_Stable_Diffusion_Inpainting_Virtue_Try_on.ipynb
+```
