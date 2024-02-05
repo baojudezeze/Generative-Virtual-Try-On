@@ -37,8 +37,11 @@ To run the fine-tuning program, install the requirements first:
 pip install -r requirements.txt
 ```
 
+Then run the fine-tuning program:
 
-
+```bash
+python train_lora_dreambooth.py
+```
 
 
 
