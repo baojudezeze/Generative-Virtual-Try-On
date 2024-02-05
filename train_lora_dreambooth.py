@@ -167,7 +167,7 @@ def parse_args(input_args=None):
     parser.add_argument(
         "--instance_data_dir",
         type=str,
-        default='./',
+        default='./instance_image/',
         help="A folder containing the training data of instance images.",
     )
     parser.add_argument(
