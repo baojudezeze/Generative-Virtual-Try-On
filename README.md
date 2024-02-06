@@ -61,6 +61,8 @@ accelerate launch train_lora_dreambooth.py \
   --max_train_steps=10000
 ```
 
+In this baseline project, we use 100 generated images as reference images, and after the fine-tuning, male model's face and cloth presentation can be greatly improved.
+
 
 
 
