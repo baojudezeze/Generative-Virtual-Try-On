@@ -38,13 +38,11 @@ from lora_diffusion import (
 )
 from lora_diffusion.xformers_utils import set_use_memory_efficient_attention_xformers
 
-
+"""
+A dataset to prepare the instance and class images with the prompts for fine-tuning the model.
+It pre-processes the images and the tokenizes prompts.
+"""
 class DreamBoothDataset(Dataset):
-    """
-    A dataset to prepare the instance and class images with the prompts for fine-tuning the model.
-    It pre-processes the images and the tokenizes prompts.
-    """
-
     def __init__(
             self,
             instance_data_root,
@@ -263,8 +261,6 @@ def parse_args(input_args=None):
             "Minimal class images for prior preservation loss. If not have enough images, additional images will be"
             " sampled with class_prompt."
         ))
-
-    # extra
     parser.add_argument(
         "--pretrained_vae_name_or_path",
         type=str,
