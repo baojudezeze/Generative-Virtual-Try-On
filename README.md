@@ -61,8 +61,7 @@ accelerate launch train_lora_dreambooth.py \
   --max_train_steps=10000
 ```
 
-In this baseline project, we use 100 generated images as reference images, and after the fine-tuning, male model's face and cloth presentation can be greatly improved.
-
+In this baseline project, we use 100 generated images as reference images, and after the fine-tuning, male model's face and cloth presentation can be greatly improved. Actually, the photo of male model after fine-tuning is completely another person from the instance image, which cannot meet the requirements of generative virtual try-on. So, in addition to fine-tuning with Dreambooth and LoRA, some other methods need to be added to preserve the identity. 
 
 
 
