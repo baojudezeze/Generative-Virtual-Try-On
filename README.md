@@ -77,14 +77,12 @@ In this baseline project, we use 100 generated images as reference images, and a
 
 [segment-anything](https://github.com/facebookresearch/segment-anything)
 
+[super-gradients](https://github.com/Deci-AI/super-gradients)
+
 [IP-Adapter](https://github.com/tencent-ailab/IP-Adapter)
 
 [InstantID](https://github.com/InstantID/InstantID)
 
 [ControlNet](https://github.com/lllyasviel/ControlNet)
-
-[super-gradients](https://github.com/Deci-AI/super-gradients)
-
-
 
 
