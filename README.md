@@ -153,7 +153,9 @@ python main.py --reference_image_path "asserts/model2.jpg" \
 Note that when you are going to inject the cloth prompt, you should make sure that the text prompt is valid. 
 For instance, the cloth image is a top, then a pair of pants should be included to the text prompt, otherwise the pipeline will probably generate a skirt.
 
+### Appendix
 
+![appendix](./asserts/appendix.png)
 
 ### Reference
 [SAM + Stable Diffusion Inpainting](https://colab.research.google.com/drive/1umJUZdqEAcm9GQkzLG-EWXo8_ya-ImRL)
