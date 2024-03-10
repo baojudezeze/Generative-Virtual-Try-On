@@ -4,7 +4,7 @@ We will make an ambitious attempt to build a project that customizes an generati
 
 ![Example](./asserts/p1.png)
 
-## VTON based on Inpainting pipeline
+## 1.VTON based on Inpainting pipeline
 
 For this project, we have accomplished the baseline implementation, which is based on the inpainting pipeline provided by [stabilityai](https://huggingface.co/stabilityai/stable-diffusion-2-inpainting) to achieve personalized generative virtual try on by masking the garment area. The pipeline is resumed from [stable-diffusion-2-base](https://huggingface.co/stabilityai/stable-diffusion-2-base) and trained for another 200k steps. Follows the mask-generation strategy presented in [LAMA](https://github.com/advimman/lama).
 
@@ -63,14 +63,14 @@ accelerate launch train_lora_dreambooth.py \
 
 In this baseline project, we use 100 generated images as reference images, and after the fine-tuning, male model's face and cloth presentation can be greatly improved. Actually, the photo of male model after fine-tuning is completely another person from the instance image, which cannot meet the requirements of generative virtual try-on. So, in addition to fine-tuning with Dreambooth and LoRA, some other methods need to be added to preserve the identity. 
 
-## Multimodal Prompt Adapter for Generative Virtual Try-On
+## 2.Multimodal Prompt Adapter for Generative Virtual Try-On
 
 We are undertaking an endeavor to build a project that customizes a generative virtual try-on (VTON) based on text and image prompt.  This project uses Stable Diffusion and Controlnet Model to constrain image generation, and leverages the multimodal prompt adapter to make the image prompt compatible with the text prompt.  The program is still in progress, but with some impressive results.
 
 ![Example1](./asserts/architecture.jpg)
 
 
-## Environment Preparation
+### Environment Preparation
 Before running the demo, you should first create a virtual environment using Anaconda:
 ```bash
 conda create -n generativeAI python==3.8
@@ -93,7 +93,7 @@ cd {your program path}\GenerativeVTON
 pip install -r requirements.txt
 ```
 
-## Checkpoints Installation
+### Checkpoints Installation
 
 To enable the program running properly, checkpoints of the following models should be downloaded and placed in the corresponding folders according to the following index:
 ![Example2](./asserts/tree.jpg)
@@ -120,7 +120,7 @@ When running the demo, the following models should also be installed automatical
 - [ControlNet models](https://huggingface.co/lllyasviel)
 
 
-## How to Use
+### How to Use
 
 You can input the photo of people of any size, but the best input size is 1024*1024. Note that the face of the person in the picture should not be occluded, and try to choose full body photo of the person as the reference image, otherwise yolo-nas-pose may not correctly predict and generate the pose image of the person.
 
@@ -155,7 +155,7 @@ For instance, the cloth image is a top, then a pair of pants should be included 
 
 
 
-## Reference
+### Reference
 [SAM + Stable Diffusion Inpainting](https://colab.research.google.com/drive/1umJUZdqEAcm9GQkzLG-EWXo8_ya-ImRL)
 
 [OutfitAnyone](https://github.com/HumanAIGC/OutfitAnyone)
