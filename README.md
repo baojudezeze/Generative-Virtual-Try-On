@@ -65,7 +65,7 @@ In this baseline project, we use 100 generated images as reference images, and a
 
 ## 2.Multimodal Prompt Adapter for Generative Virtual Try-On
 
-We are undertaking an endeavor to build a project that customizes a generative virtual try-on (VTON) based on text and image prompt.  This project uses Stable Diffusion and Controlnet Model to constrain image generation, and leverages the multimodal prompt adapter to make the image prompt compatible with the text prompt.  The program is still in progress, but with some impressive results.
+We are undertaking an endeavor to build a project that customizes a generative virtual try-on (VTON) based on text and image prompt. The model is inspired by IP-Adapter. This project uses Stable Diffusion and Controlnet Model to constrain image generation, and leverages the multimodal prompt adapter to make the image prompt compatible with the text prompt.  The program is still in progress, but with some impressive results.
 
 ![Example1](./asserts/architecture.jpg)
 
