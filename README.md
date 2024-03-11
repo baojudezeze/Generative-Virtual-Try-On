@@ -155,6 +155,8 @@ For instance, the cloth image is a top, then a pair of pants should be included 
 
 ### Appendix
 
+This is the effect that can currently be achieved by the model.
+
 ![appendix](./asserts/appendix.png)
 
 ### Reference
