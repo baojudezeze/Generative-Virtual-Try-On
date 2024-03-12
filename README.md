@@ -1,12 +1,14 @@
 # Generative-Virtual-Try-On
 
-We will make an ambitious attempt to build a project that customizes an generative virtual try-on (VTON) based on any text prompt. The project is in progress, but with some impressive results.
+We will make an ambitious attempt to build a project that customizes an generative virtual try-on (VTON) based on any text and image prompt. The project is in progress, but with some impressive results.
 
-![Example](./asserts/p1.png)
+![Example4](./asserts/results0.jpg)
 
 ## 1.VTON based on Inpainting pipeline
 
 For this project, we have accomplished the baseline implementation, which is based on the inpainting pipeline provided by [stabilityai](https://huggingface.co/stabilityai/stable-diffusion-2-inpainting) to achieve personalized generative virtual try on by masking the garment area. The pipeline is resumed from [stable-diffusion-2-base](https://huggingface.co/stabilityai/stable-diffusion-2-base) and trained for another 200k steps. Follows the mask-generation strategy presented in [LAMA](https://github.com/advimman/lama).
+
+![Example](./asserts/p1.png)
 
 ### Usage
 
@@ -65,7 +67,7 @@ In this baseline project, we use 100 generated images as reference images, and a
 
 ## 2.Multimodal Prompt Adapter for Generative Virtual Try-On
 
-We are undertaking an endeavor to build a project that customizes a generative virtual try-on (VTON) based on text and image prompt. The model is inspired by IP-Adapter. This project uses Stable Diffusion and Controlnet Model to constrain image generation, and leverages the multimodal prompt adapter to make the image prompt compatible with the text prompt.  The program is still in progress, but with some impressive results.
+We are undertaking an endeavor to build a project that customizes a generative virtual try-on (VTON) based on text and image prompt. The model is inspired by [IP-Adapter](https://github.com/tencent-ailab/IP-Adapter). This project uses Stable Diffusion and Controlnet Model to constrain image generation, and leverages the multimodal prompt adapter to make the image prompt compatible with the text prompt.  The program is still in progress, but with some impressive results.
 
 ![Example1](./asserts/architecture.jpg)
 
