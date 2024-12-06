@@ -2,11 +2,6 @@
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from diffusers.pipelines.stable_diffusion import pipeline_stable_diffusion
-import torch
-
-# Adapted
 from diffusers.models.attention_processor import Attention, XFormersAttnProcessor, SpatialNorm
 from diffusers.utils.import_utils import is_xformers_available
 from typing import Callable, Optional
@@ -147,6 +142,31 @@ class MPAdapterAttention(nn.Module):
         self.processor = MPAdapterProcessor()
 
 
+"""
+Attention processor for MP-Adapter integration.
+
+Parameters:
+    added_kv_injt_num: Number of additional key/value injection layers
+    only_text_attention: If True, process only text attention without pixel features
+    attention_op: Optional custom attention operation
+    query_dim: Dimension of query vectors
+    cross_attention_dim: Dimension of cross-attention features
+    device: Computation device
+    dtype: Data type for computations
+
+Features:
+1. Core attention processing with optional custom operation
+2. Support for both text-only and text-visual attention modes
+3. Dynamic key/value projection layers:
+   - Created when visual attention enabled (only_text_attention=False)
+   - One pair (K,V) per injected concept
+   - Projects from cross_attention_dim/query_dim to query_dim
+   - Initialized without bias terms
+
+Note: Linear projections are used to adapt visual features for cross-attention
+"""
+
+
 class MPAdapterProcessor(nn.Module):
     def __init__(self,
                  added_kv_injt_num: Optional[int] = 0,
@@ -182,7 +202,8 @@ class MPAdapterProcessor(nn.Module):
         attention_mask: Optional[torch.Tensor] = None,
         temb: Optional[torch.Tensor] = None,
         pixel_embeds: Optional[list] = None,
-        added_pixel_prompt: Optional[int] = -1,
+        added_pixel_prompt: Optional[int] = None,
+        mp_scale: float = 0.8,
         *args,
         **kwargs,
     ) -> torch.Tensor:
@@ -230,25 +251,46 @@ class MPAdapterProcessor(nn.Module):
         query = attn.head_to_batch_dim(query).contiguous()
         key = attn.head_to_batch_dim(key).contiguous()
         value = attn.head_to_batch_dim(value).contiguous()
-        
+
         hidden_states = xformers.ops.memory_efficient_attention(
             query, key, value, attn_bias=attention_mask, op=self.attention_op, scale=attn.scale
         )
 
-        # Adapted
-        if not self.only_text_attention and added_pixel_prompt != -1 and self.added_kv_injt_num > 0:
-            mp_key = self.to_mp_k[added_pixel_prompt](pixel_embeds[added_pixel_prompt])
-            mp_value = self.to_mp_v[added_pixel_prompt](pixel_embeds[added_pixel_prompt])
+        """
+        Compute and merge mp-adapter attention:
+
+        1. Conditions for MP processing:
+        - Visual attention enabled (not only_text_attention)
+        - Valid pixel prompt specified (added_pixel_prompt != None)
+        - Has injection layers (added_kv_injt_num > 0)
+
+        2. MP attention computation:
+        - Project pixel embeddings through corresponding K/V layers
+        - Reshape projections to batch-first format
+        - Apply efficient cross-attention using xformers
+        
+        3. Merge attention outputs:
+        - Combine base attention (hidden_states) with MP attention
+        - Weight MP contribution using mp_scale parameter
+        - Base attention weighted at 0.5 fixed ratio
+
+        Note: Uses memory-efficient attention implementation from xformers
+        """
+
+        if not self.only_text_attention and self.added_kv_injt_num > 0 and added_pixel_prompt != None:
+            mp_key = self.to_mp_k[added_pixel_prompt](
+                pixel_embeds[added_pixel_prompt])
+            mp_value = self.to_mp_v[added_pixel_prompt](
+                pixel_embeds[added_pixel_prompt])
             mp_key = attn.head_to_batch_dim(mp_key).contiguous()
             mp_value = attn.head_to_batch_dim(mp_value).contiguous()
-            
+
             mp_hidden_states = xformers.ops.memory_efficient_attention(
-                    query, mp_key, mp_value, attn_bias=attention_mask, op=self.attention_op, scale=attn.scale
-                )
-        
-            hidden_states = 0.5 * hidden_states + 0.8 * mp_hidden_states
-        
-        #
+                query, mp_key, mp_value, attn_bias=attention_mask, op=self.attention_op, scale=attn.scale
+            )
+
+            hidden_states = 0.5 * hidden_states + mp_scale * mp_hidden_states
+
         hidden_states = hidden_states.to(query.dtype)
         hidden_states = attn.batch_to_head_dim(hidden_states)
 
@@ -267,6 +309,12 @@ class MPAdapterProcessor(nn.Module):
         hidden_states = hidden_states / attn.rescale_output_factor
 
         return hidden_states
+
+
+"""
+Overwrite XFormers attention processor that maintains compatibility with base implementation.
+Ignore some parameters used in cross attention.
+"""
 
 
 class _XFormersAttnProcessor(XFormersAttnProcessor):
