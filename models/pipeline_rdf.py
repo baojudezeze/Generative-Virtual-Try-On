@@ -1,39 +1,36 @@
 # Adapted from https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/stable_diffusion/pipeline_stable_diffusion.py
 # and https://github.com/kongzhecn/OMG/blob/master/src/pipelines/lora_pipeline.py
 
+import torch
 import inspect
 from typing import Any, Callable, Dict, List, Optional, Union
-
-import torch
+from PIL import Image
+import numpy as np
 from packaging import version
+import torch.nn.functional as F
 from transformers import CLIPImageProcessor, CLIPTextModel, CLIPTokenizer, CLIPVisionModelWithProjection
 
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
+from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection, AutoModelForMaskGeneration
 from diffusers.callbacks import MultiPipelineCallbacks, PipelineCallback
 from diffusers.configuration_utils import FrozenDict
 from diffusers.image_processor import PipelineImageInput, VaeImageProcessor
-from diffusers.loaders import FromSingleFileMixin, IPAdapterMixin, StableDiffusionLoraLoaderMixin, TextualInversionLoaderMixin
+from diffusers.loaders import StableDiffusionLoraLoaderMixin, TextualInversionLoaderMixin
 from diffusers.models import AutoencoderKL, ImageProjection, UNet2DConditionModel
 from diffusers.models.lora import adjust_lora_scale_text_encoder
 from diffusers.schedulers import KarrasDiffusionSchedulers
 from diffusers.utils import (
     USE_PEFT_BACKEND,
     deprecate,
-    is_torch_xla_available,
     logging,
     replace_example_docstring,
     scale_lora_layers,
     unscale_lora_layers,
 )
 from diffusers.utils.torch_utils import randn_tensor
-from diffusers.pipelines.pipeline_utils import DiffusionPipeline, StableDiffusionMixin
 from diffusers.pipelines.stable_diffusion.pipeline_output import StableDiffusionPipelineOutput
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 
-
-# Adapted
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
-from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection, AutoModelForMaskGeneration
-import torch.nn.functional as F
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -128,7 +125,6 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
         image_encoder: CLIPVisionModelWithProjection = None,
         requires_safety_checker: bool = True,
     ):
-        # super().__init__()
 
         if hasattr(scheduler.config, "steps_offset") and scheduler.config.steps_offset != 1:
             deprecation_message = (
@@ -209,7 +205,7 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
             latent_processor=latent_processor,
             sam_processor=sam_processor,
             dino_model=dino_model,
-            sam_model=sam_model,  
+            sam_model=sam_model,
             image_encoder=image_encoder,
         )
         self.vae_scale_factor = 2 ** (
@@ -638,13 +634,15 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
         latents = latents * self.scheduler.init_noise_sigma
         return latents
 
-    def prepare_rois(self, timesteps, latents, prompt_embeds, object, extra_step_kwargs, device, generator, output_type):
-        
-        # TODO
-        # 从中挑选25个time steps
-        indices = torch.linspace(0, len(timesteps)-1, steps=25, dtype=torch.long)
+    # Prepare region of interest (ROI) proposals from latent diffusion process by:
+    # 1. Performing selective latent diffusion steps
+    # 2. Decoding latent and running object detection to obtain ROI boxes
+    def prepare_rois(self, timesteps, latents, prompt_embeds, object, extra_step_kwargs, pixel_embeds_injt_num, device, generator, output_type):
+
+        indices = torch.linspace(
+            0, len(timesteps)-1, steps=pixel_embeds_injt_num, dtype=torch.long)
         _timesteps = timesteps[indices]
-        self.scheduler.set_timesteps(25, device=device)
+        self.scheduler.set_timesteps(pixel_embeds_injt_num, device=device)
 
         for i, t in enumerate(_timesteps):
             latent_model_input = torch.cat(
@@ -688,47 +686,47 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
             target_sizes=[latent_img[0].size[::-1]]
         )[0]
         rois_box = [_rois["boxes"].tolist()]
-        
-        
-        
+
         # def create_box_mask(box_coords, mask_size=(768, 768)):
         #     x_min, y_min, x_max, y_max = map(int, box_coords)
         #     mask = torch.zeros((1, mask_size[0], mask_size[1]))
         #     mask[0, y_min:y_max, x_min:x_max] = 1
         #     return mask
-        
+
         # for box in rois_box:
         #     mask = create_box_mask(box)
-        
-        
-        sam_processor = self.sam_processor(latent_img[0], input_boxes=rois_box, return_tensors="pt").to("cuda")
+
+        sam_processor = self.sam_processor(
+            latent_img[0], input_boxes=rois_box, return_tensors="pt").to("cuda")
         outputs = self.sam_model(**sam_processor)
-        
-        masks = self.sam_processor.image_processor.post_process_masks(outputs.pred_masks.cpu(), sam_processor["original_sizes"].cpu(), sam_processor["reshaped_input_sizes"].cpu())[0]
+
+        masks = self.sam_processor.image_processor.post_process_masks(outputs.pred_masks.cpu(
+        ), sam_processor["original_sizes"].cpu(), sam_processor["reshaped_input_sizes"].cpu())[0]
         scores = outputs.iou_scores
-        
+
         batch_indices = torch.arange(masks.shape[0]).cpu()
         max_indices = torch.argmax(scores, dim=2).squeeze(0).cpu()
         scored_masks = masks[batch_indices, max_indices]
 
         roi_dict = {}
         for i in range(scored_masks.shape[0]):
-            roi_dict[_rois["labels"][i]] = scored_masks[i] 
-        
+            roi_dict[_rois["labels"][i]] = scored_masks[i]
+
         _object = [item.strip() for item in object.split('.') if item.strip()]
-        rois = [roi_dict.get(item.strip()).float().to(dtype=prompt_embeds.dtype, device=device) for item in _object]
+        rois = [roi_dict.get(item.strip()).float().to(
+            dtype=prompt_embeds.dtype, device=device) for item in _object]
 
         return rois
 
-    def get_region_mask(self, mask_list, feat_height, feat_width):
-        exclusive_mask = torch.zeros((feat_height, feat_width))
+    def generate_roi_mask(self, mask_list, h, w):
+        roi_mask = torch.zeros((h, w))
         for mask in mask_list:
             if mask is not None:
-                mask = F.interpolate(mask.unsqueeze(0).unsqueeze(0), size=(feat_height, feat_width),
-                                     mode='nearest').squeeze().to(dtype=exclusive_mask.dtype,
-                                                                  device=exclusive_mask.device)
-                exclusive_mask = ((mask == 1) | (exclusive_mask == 1)).to(dtype=mask.dtype)
-        return exclusive_mask
+                mask = F.interpolate(mask.unsqueeze(0).unsqueeze(0), size=(h, w),
+                                     mode='nearest').squeeze().to(dtype=roi_mask.dtype,
+                                                                  device=roi_mask.device)
+                roi_mask = ((mask == 1) | (roi_mask == 1)).to(dtype=mask.dtype)
+        return roi_mask
 
     # Copied from diffusers.pipelines.latent_consistency_models.pipeline_latent_consistency_text2img.LatentConsistencyModelPipeline.get_guidance_scale_embedding
     def get_guidance_scale_embedding(
@@ -790,6 +788,7 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
         timesteps: List[int] = None,
         sigmas: List[float] = None,
         guidance_scale: float = 7.5,
+        pixel_embeds_injt_num: Optional[int] = 20,
         negative_prompt: Optional[Union[str, List[str]]] = None,
         num_images_per_prompt: Optional[int] = 1,
         eta: float = 0.0,
@@ -862,13 +861,13 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
 
         device = self._execution_device
 
-        # TODO
-        # For classifier free guidance, we need to do two forward passes.
+        # 3. For classifier free guidance, we need to do two forward passes.
         # Here we concatenate the unconditional and text embeddings into a single batch
         # to avoid doing two forward passes
         if self.do_classifier_free_guidance:
             prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds])
-            region_pixel_embeds = [torch.cat([t1, t2]) for t1, t2 in zip(negative_pixel_embeds, pixel_embeds)]
+            region_pixel_embeds = [torch.cat([t1, t2]) for t1, t2 in zip(
+                negative_pixel_embeds, pixel_embeds)]
 
         if ip_adapter_image is not None or ip_adapter_image_embeds is not None:
             image_embeds = self.prepare_ip_adapter_image_embeds(
@@ -897,7 +896,7 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
             latents,
         )
 
-        # 6. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
+        # 6. Prepare extra step kwargs.
         extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
 
         # 6.1 Add image embeds for IP-Adapter
@@ -916,35 +915,31 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
                 guidance_scale_tensor, embedding_dim=self.unet.config.time_cond_proj_dim
             ).to(device=device, dtype=latents.dtype)
 
-
-        # TODO
-        # prepare rois
+        # 7. Prepare rois for inference stage
         rois = self.prepare_rois(
             timesteps,
             latents,
             prompt_embeds,
             object,
             extra_step_kwargs,
-            device, 
-            generator, 
+            pixel_embeds_injt_num,
+            device,
+            generator,
             output_type)
-        
-        # TODO 看一下生成的mask
+
+        # 7.1 Check the generated masks from latent space
         for i in range(len(rois)):
-            from PIL import Image
-            import numpy as np
             mask_np = rois[i].float().cpu().numpy()
             mask_np = (mask_np * 255).astype(np.uint8)
             mask_img = Image.fromarray(mask_np)
-            mask_img.save('mask_'+str(i)+'.png')
-        
-        
-        # TODO
+            mask_img.save('mask_'+str(i)+'.jpg')
+
+        # 7.2 Recover time steps and prepare latent and prompt embeds
         self.scheduler.set_timesteps(num_inference_steps, device=device)
         latents = torch.cat([latents, latents.clone()])
         dual_prompt_embeds = prompt_embeds.repeat_interleave(2, dim=0)
-        
-        # 7. Denoising loop
+
+        # 8. Denoising loop
         num_warmup_steps = len(timesteps) - \
             num_inference_steps * self.scheduler.order
         self._num_timesteps = len(timesteps)
@@ -959,7 +954,6 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
                 latent_model_input = self.scheduler.scale_model_input(
                     latent_model_input, t)
 
-                
                 # predict the noise residual
                 noise_pred = self.unet(
                     latent_model_input,
@@ -968,35 +962,40 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
                     cross_attention_kwargs=None,
                     return_dict=False,
                 )[0]
-                
 
-                if i >= 20:
-                    added_pixel_prompt = -1
-                    region_mask = self.get_region_mask(rois, noise_pred.shape[2], noise_pred.shape[3])
-                    edit_noise = torch.concat([noise_pred[0:1], noise_pred[2:3]], dim=0)
-                    roi_noise_pred = torch.zeros_like(edit_noise)
-                    roi_noise_pred[:, :, region_mask == 0] = edit_noise[:, :, region_mask == 0]
-                    
+                if pixel_embeds and i >= pixel_embeds_injt_num:
+                    added_pixel_prompt = 0
+                    region_mask = self.generate_roi_mask(
+                        rois, noise_pred.shape[2], noise_pred.shape[3])
+                    tmp_noise = torch.concat(
+                        [noise_pred[0:1], noise_pred[2:3]], dim=0)
+                    roi_noise_pred = torch.zeros_like(tmp_noise)
+                    roi_noise_pred[:, :, region_mask ==
+                                   0] = tmp_noise[:, :, region_mask == 0]
+
                     for roi in rois:
-                        added_pixel_prompt += 1
                         latent_roi = F.interpolate(roi.unsqueeze(0).unsqueeze(0),
-                                                     size=(noise_pred.shape[2], noise_pred.shape[3]),
-                                                     mode='nearest').squeeze()
-                        region_latent_model_input = torch.cat([latent_model_input[2:3].clone()] * 2)
-                        
+                                                   size=(
+                                                       noise_pred.shape[2], noise_pred.shape[3]),
+                                                   mode='nearest').squeeze()
+                        region_latent_model_input = torch.cat(
+                            [latent_model_input[2:3].clone()] * 2)
+
                         region_noise_pred = self.unet(
                             region_latent_model_input,
                             t,
                             encoder_hidden_states=prompt_embeds,
-                            cross_attention_kwargs={'pixel_embeds': region_pixel_embeds, 'added_pixel_prompt':added_pixel_prompt},
+                            cross_attention_kwargs={
+                                'pixel_embeds': region_pixel_embeds, 'added_pixel_prompt': added_pixel_prompt},
                             return_dict=False,
                         )[0]
-                        
-                        roi_noise_pred[:, :, latent_roi == 1] += ( region_noise_pred[:, :, latent_roi == 1] / (latent_roi.reshape(1, 1, *latent_roi.shape)[:, :, latent_roi == 1]))
+
+                        roi_noise_pred[:, :, latent_roi == 1] += (region_noise_pred[:, :, latent_roi == 1] / (
+                            latent_roi.reshape(1, 1, *latent_roi.shape)[:, :, latent_roi == 1]))
+                        added_pixel_prompt += 1
 
                     noise_pred[0, :, :, :] = roi_noise_pred[0]
                     noise_pred[2, :, :, :] = roi_noise_pred[1]
-                
 
                 # perform guidance
                 if self.do_classifier_free_guidance:
@@ -1012,7 +1011,6 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
                 # compute the previous noisy sample x_t -> x_t-1
                 latents = self.scheduler.step(
                     noise_pred, t, latents, **extra_step_kwargs, return_dict=False)[0]
-
 
                 if callback_on_step_end is not None:
                     callback_kwargs = {}
