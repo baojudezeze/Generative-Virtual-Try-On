@@ -65,11 +65,11 @@ class RmpAdapterPipeline:
                 embedding_dim=1280,  # self.image_encoder.config.hidden_size,
                 output_dim=self.base_pipe.unet.config.cross_attention_dim,
                 ff_mult=4,
-            ).to(self.device, dtype=self.dtype) if prompt_type == 1
+            ).to(self.device, dtype=self.dtype) if prompt_type == '1'
             else FFNResampler(
                 cross_attention_dim=self.base_pipe.unet.config.cross_attention_dim,
                 clip_embeddings_dim=1280,  # self.image_encoder.config.hidden_size,
-            ).to(self.device, dtype=self.dtype) if prompt_type == 2
+            ).to(self.device, dtype=self.dtype) if prompt_type == '2'
             else None
             for prompt_type in self.pixel_prompt_type
         ])
@@ -137,7 +137,7 @@ class RmpAdapterPipeline:
 
     def load_mp_adapter_weights(self):
 
-        state_dict = torch.load(self.mp_adapter_path, map_location="cpu")
+        state_dict = torch.load(self.mp_adapter_path, map_location="cpu", weights_only=True)
         perceiver_resampler_dict = state_dict["perceiver_resampler"]
         ffnresampler_dict = state_dict["ffnresampler"]
         mp_16_dict = state_dict["mp_adapter_16"]
