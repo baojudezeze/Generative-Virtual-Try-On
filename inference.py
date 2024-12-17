@@ -26,6 +26,7 @@ def main(args):
         sam_processor=sam_processor,
         dino_model=dino,
         sam_model=sam,
+        seg_type=args.seg_type,
         feature_extractor=None,
         safety_checker=None
     ).to(args.device)
@@ -51,7 +52,6 @@ def main(args):
         width=args.width,
         height=args.height)[0]
     image.save('out_image.png')
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
