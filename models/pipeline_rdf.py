@@ -124,6 +124,7 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
         sam_model: AutoModelForMaskGeneration,
         image_encoder: CLIPVisionModelWithProjection = None,
         requires_safety_checker: bool = True,
+        seg_type: str = 'dino',
     ):
 
         if hasattr(scheduler.config, "steps_offset") and scheduler.config.steps_offset != 1:
@@ -214,6 +215,7 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
             vae_scale_factor=self.vae_scale_factor)
         self.register_to_config(
             requires_safety_checker=requires_safety_checker)
+        self.seg_type = seg_type
 
     def _encode_prompt(
         self,
@@ -637,7 +639,7 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
     # Prepare region of interest (ROI) proposals from latent diffusion process by:
     # 1. Performing selective latent diffusion steps
     # 2. Decoding latent and running object detection to obtain ROI boxes
-    def prepare_rois(self, timesteps, latents, prompt_embeds, object, extra_step_kwargs, pixel_embeds_injt_num, device, generator, output_type):
+    def prepare_rois(self, timesteps, latents, prompt_embeds, object, extra_step_kwargs, pixel_embeds_injt_num, device, generator, output_type, width, height):
 
         indices = torch.linspace(
             0, len(timesteps)-1, steps=pixel_embeds_injt_num, dtype=torch.long)
@@ -686,31 +688,29 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
             target_sizes=[latent_img[0].size[::-1]]
         )[0]
         rois_box = [_rois["boxes"].tolist()]
+        rois_label = [_rois["labels"]]
 
-        # def create_box_mask(box_coords, mask_size=(768, 768)):
-        #     x_min, y_min, x_max, y_max = map(int, box_coords)
-        #     mask = torch.zeros((1, mask_size[0], mask_size[1]))
-        #     mask[0, y_min:y_max, x_min:x_max] = 1
-        #     return mask
+        if self.seg_type == 'dino':
+            roi_dict = {}
+            for roi_box, roi_label in zip(rois_box[0], rois_label[0]):
+                mask = self.create_box_mask(roi_box, (width, height))
+                roi_dict[roi_label] = mask
+        elif self.seg_type == 'sam':
+            sam_processor = self.sam_processor(
+                latent_img[0], input_boxes=rois_box, return_tensors="pt").to("cuda")
+            outputs = self.sam_model(**sam_processor)
 
-        # for box in rois_box:
-        #     mask = create_box_mask(box)
+            masks = self.sam_processor.image_processor.post_process_masks(outputs.pred_masks.cpu(
+            ), sam_processor["original_sizes"].cpu(), sam_processor["reshaped_input_sizes"].cpu())[0]
+            scores = outputs.iou_scores
 
-        sam_processor = self.sam_processor(
-            latent_img[0], input_boxes=rois_box, return_tensors="pt").to("cuda")
-        outputs = self.sam_model(**sam_processor)
+            batch_indices = torch.arange(masks.shape[0]).cpu()
+            max_indices = torch.argmax(scores, dim=2).squeeze(0).cpu()
+            scored_masks = masks[batch_indices, max_indices]
 
-        masks = self.sam_processor.image_processor.post_process_masks(outputs.pred_masks.cpu(
-        ), sam_processor["original_sizes"].cpu(), sam_processor["reshaped_input_sizes"].cpu())[0]
-        scores = outputs.iou_scores
-
-        batch_indices = torch.arange(masks.shape[0]).cpu()
-        max_indices = torch.argmax(scores, dim=2).squeeze(0).cpu()
-        scored_masks = masks[batch_indices, max_indices]
-
-        roi_dict = {}
-        for i in range(scored_masks.shape[0]):
-            roi_dict[_rois["labels"][i]] = scored_masks[i]
+            roi_dict = {}
+            for i in range(scored_masks.shape[0]):
+                roi_dict[_rois["labels"][i]] = scored_masks[i]
 
         _object = [item.strip() for item in object.split('.') if item.strip()]
         rois = [roi_dict.get(item.strip()).float().to(
@@ -718,6 +718,13 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
 
         return rois
 
+    def create_box_mask(self, box_coords, mask_size):
+                x_min, y_min, x_max, y_max = map(int, box_coords)
+                mask = torch.zeros((1, mask_size[0], mask_size[1]))
+                mask[0, y_min:y_max, x_min:x_max] = 1
+                mask = mask.squeeze(0)
+                return mask
+    
     def generate_roi_mask(self, mask_list, h, w):
         roi_mask = torch.zeros((h, w))
         for mask in mask_list:
@@ -925,7 +932,9 @@ class RegionBasedDenoisingPipeline(StableDiffusionPipeline):
             pixel_embeds_injt_num,
             device,
             generator,
-            output_type)
+            output_type,
+            width,
+            height)
 
         # 7.1 Check the generated masks from latent space
         for i in range(len(rois)):
