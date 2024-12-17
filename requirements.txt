@@ -5,3 +5,4 @@ accelerate==1.1.1
 torch_xla
 xformers
 safetensors
+triton
