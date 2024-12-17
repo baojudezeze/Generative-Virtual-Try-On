@@ -51,7 +51,7 @@ def main(args):
         width=args.width,
         height=args.height)[0]
     image.save('out_image.png')
-  
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -60,6 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("--height", default=768, type=int)
     parser.add_argument("--device", default="cuda", type=str)
     parser.add_argument("--infernece_steps", default=50, type=int)
+    parser.add_argument("--seg_type", type=str, choices=['dino', 'sam'])
     parser.add_argument("--pixel_embeds_injt_num", default=20, type=int,
                         help="the starting step number where image features are injected into the model inference process")
     parser.add_argument("--dtype", default=torch.bfloat16,
