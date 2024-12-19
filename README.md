@@ -15,7 +15,7 @@
 
 ## Multi-concept Customization
 
-
+![Example](./asserts/p3.png)
 
 ## Virtual Try-on
 
@@ -88,24 +88,26 @@ python inference.py --image_prompt_list "<your image prompt path 1>,<your image 
 
 - For image_prompt_type, the default is a list of 1's. Use type 2 for character concepts and type 1 for item concepts (1 = object, 2 = human).
 
+- Since our model is based on SD1.5 series, try to use 512*512 size when image distortion appears under 768*768 size generation.
+
 ## Example Use Cases:
 
 **Concept Customization:** 
 
 ```bash
-python inference.py --image_prompt_list "'./asserts/f1.png','./asserts/f2.png'" --text_prompt 'photo of a man and a woman, upper body portrait, wearing jeans, street background' --text_object 'woman. man. ' --image_prompt_type '2,2' --seg_type sam
+python inference.py --image_prompt_list "./asserts/f1.png,./asserts/f2.png" --text_prompt 'photo of a man and a woman, upper body portrait, wearing jeans, street background' --text_object 'woman. man. ' --image_prompt_type '2,2' --seg_type 'dino'
 ```
 
 **Virtual Try-on:**
 
 ```bash
-python inference.py --image_prompt_list "'./asserts/c1.png','./asserts/c2.png'" --text_prompt 'half-protait, a woman wearing a shirt and white long skirt, walking on the street.' --text_object 'shirt. skirt. ' --image_prompt_type '1,1' --seg_type sam
+python inference.py --image_prompt_list "./asserts/c1.png,./asserts/c2.png" --text_prompt 'half-protait, a woman wearing a shirt and white long skirt, walking on the street.' --text_object 'shirt. skirt. ' --image_prompt_type '1,1' --seg_type 'sam'
 ```
 
 **Identity-consistent Story Visualization:**
 
 ```bash
-python inference.py --image_prompt_list "'./asserts/c1.png','./asserts/c2.png'" --text_prompt 'half-protait, a woman wearing a shirt and white long skirt, walking on the street.' --text_object 'shirt. skirt. ' --image_prompt_type '1,1' --seg_type sam
+python inference.py --image_prompt_list "./asserts/c1.png,./asserts/c2.png" --text_prompt 'half-protait, a woman wearing a shirt and white long skirt, walking on the street.' --text_object 'shirt. skirt. ' --image_prompt_type '1,1' --seg_type sam
 ```
 
 
