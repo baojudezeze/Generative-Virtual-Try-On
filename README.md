@@ -77,7 +77,7 @@ python inference.py --image_prompt_list "<your image prompt path 1>,<your image 
 --text_prompt <your text prompt> \
 --text_object '<keyword 1>. <keyword 2>. ' \
 --image_prompt_type '<type 1>,<type 2>' \
---seg_type sam \
+--seg_type '<latent seg type>' \
 ```
 
 ## Important Notes:
