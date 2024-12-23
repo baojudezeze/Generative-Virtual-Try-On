@@ -53,6 +53,7 @@ def main(args):
         height=args.height)[0]
     image.save('out_image.png')
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", default=42, type=int)
@@ -66,7 +67,7 @@ if __name__ == "__main__":
     parser.add_argument("--dtype", default=torch.bfloat16,
                         help="dtype for model inference")
     parser.add_argument("--adapter_model_path",
-                        default="./pretrained_weights/mp_adapter/pipeline_weights.bin", type=str)
+                        default="./pretrained_weights/mp_adapter/pipeline_weights.pth", type=str)
     parser.add_argument("--base_model_path", default="SG161222/Realistic_Vision_V5.1_noVAE", type=str,
                         help="we recommend using more advanced models like SG161222/* series for realistic image generation.")
     parser.add_argument("--vae_model_path",
@@ -79,7 +80,7 @@ if __name__ == "__main__":
                         default="facebook/sam-vit-base", type=str)
     parser.add_argument("--image_prompt_list", required=True, type=lambda x: x.split(","),
                         help="list of injected image features, should in format of ['prompt1', 'prompt2', 'prompt3']")
-    parser.add_argument("--image_prompt_type", default=None, type=lambda x: x.split(","),
+    parser.add_argument("--image_prompt_type", default=None, type=lambda x: [int(i) for i in x.split(",")],
                         help="list of feature types to inject (1=object, 2=human), must match length of image_prompt_list, e.g.:[2,1,1]")
     parser.add_argument("--text_prompt", required=True, type=str,
                         help="Text prompt used during model inference")
@@ -89,3 +90,5 @@ if __name__ == "__main__":
         "--negative_prompt", default="deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime:1.4", type=str)
     args = parser.parse_args()
     main(args)
+
+
