@@ -73,7 +73,7 @@ if __name__ == "__main__":
     parser.add_argument("--vae_model_path",
                         default="stabilityai/sd-vae-ft-mse", type=str)
     parser.add_argument("--clip_model_path",
-                        default="openai/clip-vit-large-patch14", type=str)
+                        default="./pretrained_weights/clip_path/", type=str)
     parser.add_argument("--dino_model_path",
                         default="IDEA-Research/grounding-dino-tiny", type=str)
     parser.add_argument("--sam_model_path",
