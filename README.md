@@ -23,7 +23,7 @@
 
 ## Identity-consistent Story Visualization
 
-
+![Example](./asserts/p4.png)
 
 # Installation
 
@@ -107,7 +107,7 @@ python inference.py --image_prompt_list "./asserts/c1.png,./asserts/c2.png" --te
 **Identity-consistent Story Visualization:**
 
 ```bash
-python inference.py --image_prompt_list "./asserts/c1.png,./asserts/c2.png" --text_prompt 'half-protait, a woman wearing a shirt and white long skirt, walking on the street.' --text_object 'shirt. skirt. ' --image_prompt_type '1,1' --seg_type sam
+python inference.py --image_prompt_list "./asserts/f3.png" --text_prompt 'photo of a girl, wearing a gray t-shirt, playing the guitar, campus background' --text_object 'girl.' --image_prompt_type '2' --seg_type 'dino'
 ```
 
 
