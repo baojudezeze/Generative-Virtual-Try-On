@@ -63,6 +63,12 @@ The following base model weights will be downloaded automatically:
 
 Download our [weights](https://drive.google.com/file/d/14S0q3VvTr59lVMWO3TXryvXhIK4W6Sjr/view?usp=sharing) of RMP-Adapter, and place these weights under `./pretrained_weights/mp_adapter` directory.
 
+Download clip-with-projection weights using following command:
+
+```bash
+!huggingface-cli download --resume-download h94/IP-Adapter --include models/image_encoder/ --local-dir ./RMP-Adapter/pretrained_weights/clip_path/
+```
+
 You can freely choose alternative SD-1.5-based models (e.g. Realistic_Vision series or various anime-focused models), as well as more advanced versions of DINO and SAM models (e.g. grounding-dino-base, sam-vit-huge). These alternatives should provide better results.
 
 If you do not have access to Hugging Face, please download these base models manually and place them in the `./pretrained_weights` directory.
