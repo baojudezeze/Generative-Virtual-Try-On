@@ -66,7 +66,7 @@ Download our [weights](https://drive.google.com/file/d/14S0q3VvTr59lVMWO3TXryvXh
 Download clip-with-projection weights using following command:
 
 ```bash
-!huggingface-cli download --resume-download h94/IP-Adapter --include models/image_encoder/ --local-dir ./RMP-Adapter/pretrained_weights/clip_path/
+huggingface-cli download --resume-download h94/IP-Adapter --include models/image_encoder/ --local-dir ./RMP-Adapter/pretrained_weights/clip_path/
 ```
 
 You can freely choose alternative SD-1.5-based models (e.g. Realistic_Vision series or various anime-focused models), as well as more advanced versions of DINO and SAM models (e.g. grounding-dino-base, sam-vit-huge). These alternatives should provide better results.
