@@ -61,7 +61,7 @@ The following base model weights will be downloaded automatically:
 
 **Manual Downloads:** 
 
-Download our [weights](https://) of RMP-Adapter, and place these weights under `./pretrained_weights/mp_adapter` directory.
+Download our [weights](https://drive.google.com/file/d/14S0q3VvTr59lVMWO3TXryvXhIK4W6Sjr/view?usp=sharing) of RMP-Adapter, and place these weights under `./pretrained_weights/mp_adapter` directory.
 
 You can freely choose alternative SD-1.5-based models (e.g. Realistic_Vision series or various anime-focused models), as well as more advanced versions of DINO and SAM models (e.g. grounding-dino-base, sam-vit-huge). These alternatives should provide better results.
 
