@@ -53,8 +53,6 @@ The following base model weights will be downloaded automatically:
 
 `stabilityai/sd-vae-ft-mse`
 
-`openai/clip-vit-large-patch14`
-
 `IDEA-Research/grounding-dino-tiny`
 
 `facebook/sam-vit-base`
